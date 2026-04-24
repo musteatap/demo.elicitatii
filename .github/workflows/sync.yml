@@ -2,8 +2,8 @@ name: Sync zilnic licitatii
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # În fiecare noapte la 02:00 UTC (04:00 ora României)
-  workflow_dispatch:       # Permite și rulare manuală
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -11,8 +11,8 @@ jobs:
     steps:
       - name: Sync CAN
         run: |
-          curl -f "https://demo-elicitatii.vercel.app/api/sync?source=CAN" || exit 1
+          curl -f "https://demo-elicitatii.vercel.app/api/sync?source=CAN"
 
       - name: Sync CN
         run: |
-          curl -f "https://demo-elicitatii.vercel.app/api/sync?source=CN" || exit 1
+          curl -f "https://demo-elicitatii.vercel.app/api/sync?source=CN"
