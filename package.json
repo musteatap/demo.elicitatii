@@ -1,0 +1,17 @@
+{
+  "name": "licitatii-ro",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "import": "node --experimental-vm-modules scripts/import-istoric.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "next": "14.2.3",
+    "react": "^18",
+    "react-dom": "^18"
+  }
+}
