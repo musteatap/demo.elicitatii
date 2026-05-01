@@ -106,7 +106,12 @@ function Card({ item, onClick }) {
       <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic" }}>📁 {cpv}</div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "#94a3b8" }}>🏛 {name}</span>
+        <span
+          onClick={e => { e.stopPropagation(); onClick({ _authoritySearch: item.authority || item.contractingAuthorityNameAndFN }); }}
+          style={{ fontSize: 12, color: "#94a3b8", cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
+        >
+         🏛 {name}
+        </span>
         <span style={{ fontSize: 17, fontWeight: 800, color: Number(val) > 0 ? "#f59e0b" : "#334155" }}>
           {fmt(val)}
         </span>
@@ -457,9 +462,15 @@ export default function Page() {
 
         {/* ── Grid carduri ─────────────────────────────────────────────────── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 14 }}>
-          {items.map(item => (
-            <Card key={item.id || item.caNoticeId} item={item} onClick={setSelected} />
-          ))}
+  {items.map(item => (
+  <Card key={item.id || item.caNoticeId} item={item} onClick={(clicked) => {
+    if (clicked._authoritySearch) {
+      setSearch(clicked._authoritySearch);
+    } else {
+      setSelected(clicked);
+    }
+  }} />
+))}
         </div>
 
         {items.length === 0 && !loading && (
