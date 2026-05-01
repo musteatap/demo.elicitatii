@@ -240,9 +240,12 @@ export default function Page() {
   const [source,      setSource]      = useState("demo"); // "demo" | "db" | "live"
   const [page, setPage] = useState(0);
   const [totalDB, setTotalDB] = useState(0);
+  const [filterAn, setFilterAn]       = useState("");
+  const [filterValMin, setFilterValMin] = useState("");
+  const [filterValMax, setFilterValMax] = useState("");
 
   // ── Caută în baza de date ─────────────────────────────────────────────────
-  async function searchDB(q, type, state, sort, p = 0) {
+  async function searchDB(q, type, state, sort, p = 0, an = "", valMin = "", valMax = "") {
     setLoading(true);
     setError(null);
     try {
@@ -252,6 +255,9 @@ export default function Page() {
       if (state)  params.set("state", state);
       if (sort)   params.set("sort",  sort);
       if (page > 0)  params.set("page",  page);
+      if (an)     params.set("an",      an);
+      if (valMin) params.set("val_min", valMin);
+      if (valMax) params.set("val_max", valMax);
 
       const res = await fetch(`/api/search?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -303,11 +309,14 @@ export default function Page() {
         filterType  !== "toate" ? filterType  : "",
         filterState !== "toate" ? filterState : "",
         sortBy,
-        0  // resetează la pagina 1 când se schimbă filtrele
+        0, // resetează la pagina 1 când se schimbă filtrele
+        filterAn,
+        filterValMin,
+        filterValMax
      );
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, filterType, filterState, sortBy]);
+  }, [search, filterType, filterState, sortBy, filterAn, filterValMin, filterValMax]);
 
   // ── Statistici ────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
@@ -416,6 +425,26 @@ export default function Page() {
           <select value={sortBy}       onChange={e => setSortBy(e.target.value)}      style={sel}>
             <option value="date">↓ Dată</option>
             <option value="valoare">↓ Valoare</option>
+          </select>
+          <input
+           type="number"
+           placeholder="Valoare min (RON)"
+           value={filterValMin}
+           onChange={e => setFilterValMin(e.target.value)}
+           style={{ ...sel, width: 150 }}
+          />
+          <input
+           type="number"
+           placeholder="Valoare max (RON)"
+           value={filterValMax}
+           onChange={e => setFilterValMax(e.target.value)}
+           style={{ ...sel, width: 150 }}
+          />
+          <select value={filterAn} onChange={e => setFilterAn(e.target.value)} style={sel}>
+           <option value="">Toți anii</option>
+           {[2026,2025,2024,2023,2022,2021,2020,2019,2018,2017,2016,2015].map(an => (
+            <option key={an} value={an}>{an}</option>
+         ))}
           </select>
         </div>
 

@@ -13,6 +13,9 @@ export async function GET(req) {
   const page  = parseInt(searchParams.get("page") || "0");
   const limit = 50;
   const offset = page * limit;
+  const an     = (searchParams.get("an")      || "").trim();
+  const valMin = (searchParams.get("val_min") || "").trim();
+  const valMax = (searchParams.get("val_max") || "").trim();
 
   try {
     // Construim WHERE ca string — evităm SQL injection cu replace simplu
@@ -25,6 +28,9 @@ export async function GET(req) {
     }
     if (type)  conditions.push(`contract_type = '${type.replace(/'/g, "''")}'`);
     if (state) conditions.push(`procedure_state = '${state.replace(/'/g, "''")}'`);
+    if (an)     conditions.push(`EXTRACT(YEAR FROM notice_date) = ${parseInt(an)}`);
+    if (valMin) conditions.push(`value_ron >= ${parseFloat(valMin)}`);
+    if (valMax) conditions.push(`value_ron <= ${parseFloat(valMax)}`);
 
     const where   = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const orderBy = sort === "valoare"
