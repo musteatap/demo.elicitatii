@@ -238,22 +238,27 @@ export default function Page() {
   const [sortBy,      setSortBy]      = useState("date");
   const [selected,    setSelected]    = useState(null);
   const [source,      setSource]      = useState("demo"); // "demo" | "db" | "live"
+  const [page, setPage] = useState(0);
+  const [totalDB, setTotalDB] = useState(0);
 
   // ── Caută în baza de date ─────────────────────────────────────────────────
-  async function searchDB(q, type, state, sort) {
+  async function searchDB(q, type, state, sort, p = 0) {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (q)     params.set("q",     q);
-      if (type)  params.set("type",  type);
-      if (state) params.set("state", state);
-      if (sort)  params.set("sort",  sort);
+      if (q)      params.set("q",     q);
+      if (type)   params.set("type",  type);
+      if (state)  params.set("state", state);
+      if (sort)   params.set("sort",  sort);
+      if (page > 0)  params.set("page",  page);
 
       const res = await fetch(`/api/search?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setItems(data.items || []);
+      setTotalDB(data.total || 0);
+      setPage(p);
       setDbTotal(data.total);
       setSource("db");
       setLiveLoaded(true);
@@ -297,8 +302,9 @@ export default function Page() {
         search,
         filterType  !== "toate" ? filterType  : "",
         filterState !== "toate" ? filterState : "",
-        sortBy
-      );
+        sortBy,
+        0  // resetează la pagina 1 când se schimbă filtrele
+     );
     }, 300);
     return () => clearTimeout(timer);
   }, [search, filterType, filterState, sortBy]);
@@ -436,6 +442,46 @@ export default function Page() {
             </div>
           </div>
         )}
+
+{/* Paginare */}
+{totalDB > 50 && (
+  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 32 }}>
+    <button
+      onClick={() => searchDB(search, filterType !== "toate" ? filterType : "", filterState !== "toate" ? filterState : "", sortBy, page - 1)}
+      disabled={page === 0}
+      style={{
+        background: page === 0 ? "#1f2937" : "#1d4ed8",
+        border: "none", color: "#fff",
+        padding: "8px 20px", borderRadius: 8,
+        fontSize: 14, fontWeight: 700,
+        cursor: page === 0 ? "not-allowed" : "pointer",
+        opacity: page === 0 ? 0.5 : 1
+      }}
+    >
+      ← Anterior
+    </button>
+
+    <span style={{ color: "#9ca3af", fontSize: 14 }}>
+      Pagina <strong style={{ color: "#f9fafb" }}>{page + 1}</strong> din <strong style={{ color: "#f9fafb" }}>{Math.ceil(totalDB / 50)}</strong>
+      <span style={{ color: "#4b5563", marginLeft: 8 }}>({totalDB.toLocaleString()} total)</span>
+    </span>
+
+    <button
+      onClick={() => searchDB(search, filterType !== "toate" ? filterType : "", filterState !== "toate" ? filterState : "", sortBy, page + 1)}
+      disabled={page >= Math.ceil(totalDB / 50) - 1}
+      style={{
+        background: page >= Math.ceil(totalDB / 50) - 1 ? "#1f2937" : "#1d4ed8",
+        border: "none", color: "#fff",
+        padding: "8px 20px", borderRadius: 8,
+        fontSize: 14, fontWeight: 700,
+        cursor: page >= Math.ceil(totalDB / 50) - 1 ? "not-allowed" : "pointer",
+        opacity: page >= Math.ceil(totalDB / 50) - 1 ? 0.5 : 1
+      }}
+    >
+      Următor →
+    </button>
+  </div>
+)}
 
         <footer style={{ marginTop: 48, textAlign: "center", fontSize: 11, color: "#1e293b" }}>
           Date publice preluate din portalul SEAP/e-licitatie.ro · Licența pentru Guvernare Deschisă v1.0
