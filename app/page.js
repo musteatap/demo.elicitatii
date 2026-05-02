@@ -248,6 +248,10 @@ export default function Page() {
   const [filterAn, setFilterAn]       = useState("");
   const [filterValMin, setFilterValMin] = useState("");
   const [filterValMax, setFilterValMax] = useState("");
+  const [activeTab, setActiveTab] = useState("licitatii"); // "licitatii" | "achizitii"
+  const [achizitii, setAchizitii]       = useState([]);
+  const [achizitiiTotal, setAchizitiiTotal] = useState(0);
+  const [achizitiiPage, setAchizitiiPage]   = useState(0);
 
   // ── Caută în baza de date ─────────────────────────────────────────────────
   async function searchDB(q, type, state, sort, p = 0, an = "", valMin = "", valMax = "") {
@@ -278,7 +282,28 @@ export default function Page() {
     }
     setLoading(false);
   }
+  
+async function searchAchizitii(q, state, sort, p = 0) {
+  setLoading(true);
+  setError(null);
+  try {
+    const params = new URLSearchParams();
+    if (q)     params.set("q",     q);
+    if (state) params.set("state", state);
+    if (sort)  params.set("sort",  sort);
+    if (p > 0) params.set("page",  p);
 
+    const res = await fetch(`/api/search-achizitii?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    setAchizitii(data.items || []);
+    setAchizitiiTotal(data.total || 0);
+    setAchizitiiPage(p);
+  } catch (e) {
+    setError(e.message);
+  }
+  setLoading(false);
+}
   // ── Încarcă date live (fără DB) ───────────────────────────────────────────
   async function loadLive() {
     setLoading(true);
@@ -323,6 +348,19 @@ export default function Page() {
     return () => clearTimeout(timer);
   }, [search, filterType, filterState, sortBy, filterAn, filterValMin, filterValMax]);
 
+useEffect(() => {
+  if (activeTab === "achizitii") {
+    const timer = setTimeout(() => {
+      searchAchizitii(
+        search,
+        filterState !== "toate" ? filterState : "",
+        sortBy
+      );
+    }, 300);
+    return () => clearTimeout(timer);
+  }
+}, [search, filterState, sortBy, activeTab]);
+
   // ── Statistici ────────────────────────────────────────────────────────────
   const stats = useMemo(() => ({
     count:     items.length,
@@ -357,7 +395,30 @@ export default function Page() {
           </div>
           <div style={{ fontSize: 11, color: "#334155" }}>Interfață alternativă · e-licitatie.ro</div>
         </div>
-
+         <div style={{ marginLeft: 24, display: "flex", gap: 4 }}>
+  <button
+    onClick={() => setActiveTab("licitatii")}
+    style={{
+      background: activeTab === "licitatii" ? "#1d4ed8" : "transparent",
+      border: "1px solid " + (activeTab === "licitatii" ? "#1d4ed8" : "#1f2937"),
+      color: "#fff", padding: "6px 14px", borderRadius: 8,
+      fontSize: 13, fontWeight: 700, cursor: "pointer"
+    }}
+  >
+    📋 Licitații
+  </button>
+  <button
+    onClick={() => setActiveTab("achizitii")}
+    style={{
+      background: activeTab === "achizitii" ? "#1d4ed8" : "transparent",
+      border: "1px solid " + (activeTab === "achizitii" ? "#1d4ed8" : "#1f2937"),
+      color: "#fff", padding: "6px 14px", borderRadius: 8,
+      fontSize: 13, fontWeight: 700, cursor: "pointer"
+    }}
+  >
+    🛒 Achiziții Directe
+  </button>
+</div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
           {source === "db" && (
             <span style={{ fontSize: 11, color: "#8b5cf6", background: "#8b5cf622", padding: "3px 10px", borderRadius: 6, fontWeight: 700 }}>
@@ -461,27 +522,69 @@ export default function Page() {
         </div>
 
         {/* ── Grid carduri ─────────────────────────────────────────────────── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 14 }}>
-  {items.map(item => (
-  <Card key={item.id || item.caNoticeId} item={item} onClick={(clicked) => {
-    if (clicked._authoritySearch) {
-      setSearch(clicked._authoritySearch);
-    } else {
-      setSelected(clicked);
-    }
-  }} />
-))}
-        </div>
-
-        {items.length === 0 && !loading && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-            <div>Niciun rezultat{search ? ` pentru „${search}"` : ""}</div>
-            <div style={{ fontSize: 12, marginTop: 8, color: "#1e293b" }}>
-              Baza de date conține 200 licitații. Rulează sync pentru mai multe.
-            </div>
+        {activeTab === "licitatii" ? (
+  <>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 14 }}>
+      {items.map(item => (
+        <Card key={item.id || item.caNoticeId} item={item} onClick={(clicked) => {
+          if (clicked._authoritySearch) {
+            setSearch(clicked._authoritySearch);
+          } else {
+            setSelected(clicked);
+          }
+        }} />
+      ))}
+    </div>
+    {items.length === 0 && !loading && (
+      <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
+        <div>Niciun rezultat{search ? ` pentru „${search}"` : ""}</div>
+      </div>
+    )}
+    {totalDB > 50 && (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 32 }}>
+        <button onClick={() => searchDB(search, filterType !== "toate" ? filterType : "", filterState !== "toate" ? filterState : "", sortBy, page - 1)} disabled={page === 0} style={{ background: page === 0 ? "#1f2937" : "#1d4ed8", border: "none", color: "#fff", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: page === 0 ? "not-allowed" : "pointer", opacity: page === 0 ? 0.5 : 1 }}>← Anterior</button>
+        <span style={{ color: "#9ca3af", fontSize: 14 }}>Pagina <strong style={{ color: "#f9fafb" }}>{page + 1}</strong> din <strong style={{ color: "#f9fafb" }}>{Math.ceil(totalDB / 50)}</strong></span>
+        <button onClick={() => searchDB(search, filterType !== "toate" ? filterType : "", filterState !== "toate" ? filterState : "", sortBy, page + 1)} disabled={page >= Math.ceil(totalDB / 50) - 1} style={{ background: page >= Math.ceil(totalDB / 50) - 1 ? "#1f2937" : "#1d4ed8", border: "none", color: "#fff", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: page >= Math.ceil(totalDB / 50) - 1 ? "not-allowed" : "pointer", opacity: page >= Math.ceil(totalDB / 50) - 1 ? 0.5 : 1 }}>Următor →</button>
+      </div>
+    )}
+  </>
+) : (
+  <>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(330px, 1fr))", gap: 14 }}>
+      {achizitii.map(item => (
+        <div key={item.id} style={{ background: "#0f172a", border: "1px solid #1f2937", borderRadius: 12, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "#10b981" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <span style={{ fontFamily: "monospace", fontSize: 12, color: "#64748b", fontWeight: 700 }}>{item.cod_unic}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#10b98122", color: "#10b981", border: "1px solid #10b98144" }}>{item.state}</span>
           </div>
-        )}
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.45 }}>{item.title}</div>
+          <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic" }}>📁 {item.cpv_name}</div>
+          <div style={{ fontSize: 12, color: "#94a3b8" }}>🏛 {item.authority}</div>
+          <div style={{ fontSize: 12, color: "#64748b" }}>🏢 {item.supplier}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 11, color: "#334155" }}>📅 {item.publication_date ? new Date(item.publication_date).toLocaleDateString("ro-RO") : "—"}</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: Number(item.value_ron) > 0 ? "#f59e0b" : "#334155" }}>{Number(item.value_ron) > 0 ? `${Number(item.value_ron).toLocaleString("ro-RO")} RON` : "—"}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+    {achizitii.length === 0 && !loading && (
+      <div style={{ textAlign: "center", padding: "60px 20px", color: "#334155" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🛒</div>
+        <div>Niciun rezultat{search ? ` pentru „${search}"` : ""}</div>
+      </div>
+    )}
+    {achizitiiTotal > 50 && (
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 32 }}>
+        <button onClick={() => searchAchizitii(search, filterState !== "toate" ? filterState : "", sortBy, achizitiiPage - 1)} disabled={achizitiiPage === 0} style={{ background: achizitiiPage === 0 ? "#1f2937" : "#1d4ed8", border: "none", color: "#fff", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: achizitiiPage === 0 ? "not-allowed" : "pointer", opacity: achizitiiPage === 0 ? 0.5 : 1 }}>← Anterior</button>
+        <span style={{ color: "#9ca3af", fontSize: 14 }}>Pagina <strong style={{ color: "#f9fafb" }}>{achizitiiPage + 1}</strong> din <strong style={{ color: "#f9fafb" }}>{Math.ceil(achizitiiTotal / 50)}</strong></span>
+        <button onClick={() => searchAchizitii(search, filterState !== "toate" ? filterState : "", sortBy, achizitiiPage + 1)} disabled={achizitiiPage >= Math.ceil(achizitiiTotal / 50) - 1} style={{ background: achizitiiPage >= Math.ceil(achizitiiTotal / 50) - 1 ? "#1f2937" : "#1d4ed8", border: "none", color: "#fff", padding: "8px 20px", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: achizitiiPage >= Math.ceil(achizitiiTotal / 50) - 1 ? "not-allowed" : "pointer", opacity: achizitiiPage >= Math.ceil(achizitiiTotal / 50) - 1 ? 0.5 : 1 }}>Următor →</button>
+      </div>
+    )}
+  </>
+)}
 
 {/* Paginare */}
 {totalDB > 50 && (
