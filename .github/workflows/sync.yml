@@ -16,3 +16,7 @@ jobs:
       - name: Sync CN
         run: |
           curl -f "https://demo-elicitatii.vercel.app/api/sync?source=CN"
+
+      - name: Sync Achizitii Directe
+        run: |
+          curl -f "https://demo-elicitatii.vercel.app/api/sync-achizitii"

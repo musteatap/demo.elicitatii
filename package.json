@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "import": "node --experimental-vm-modules scripts/import-istoric.js",
+    "import-achizitii": "node --experimental-vm-modules scripts/import-achizitii.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
